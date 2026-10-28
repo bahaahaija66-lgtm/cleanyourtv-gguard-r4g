@@ -1,0 +1,101 @@
+name: G-GUARD R4G launcher APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/gguard-r4g-apk.yml
+      - launcher/**
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          packages: platforms;android-34 build-tools;34.0.0
+      - uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1
+
+      - name: Verify G-GUARD configuration
+        run: |
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          root = ET.parse('launcher/app/src/main/res/values/config.xml').getroot()
+          values = {item.attrib['name']: item for item in root}
+          expected_dock = [
+              'com.google.android.youtube.tv',
+              'com.netflix.ninja',
+              'com.nst.iptvsmarterstvbox',
+              'net.mbc.shahidTV',
+              'com.osn.go',
+              'com.apple.atve.androidtv.appletv',
+          ]
+          assert [item.text for item in values['dock_apps']] == expected_dock
+          for name, expected in {
+              'locale': 'en', 'columns': '6',
+              'live_tv_package': 'com.realtek.tv',
+              'fill_dock': 'false', 'key_filter': 'false',
+              'restore_key_services': 'false',
+              'boot_to_live_tv': 'false', 'open_on_start_choice': 'false',
+              'power_on_home': 'false', 'power_on_home_always': 'false',
+              'show_inputs_pill': 'true', 'show_network_pill': 'true',
+              'dock_row': 'true', 'animations': 'true',
+          }.items():
+              assert values[name].text == expected, name
+          assert not values['stock_home_redirect'].text
+          assert len(values['hidden_apps']) == 0
+          print('Six-app dock and isolated-test safety settings verified.')
+          PY
+
+      - name: Unit tests, lint and release APK
+        working-directory: launcher
+        run: sh ./gradlew --no-daemon --max-workers=2 testReleaseUnitTest lintRelease assembleRelease
+
+      - name: Verify and package this run's APK
+        run: |
+          set -euo pipefail
+          apk=launcher/app/build/outputs/apk/release/app-release.apk
+          test "$(stat -c %s "$apk")" -lt 589824
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose "$apk"
+          mkdir -p artifact
+          cp "$apk" artifact/CleanYourTV-GGUARD-R4G-6app-release.apk
+          cd artifact
+          sha256sum CleanYourTV-GGUARD-R4G-6app-release.apk > SHA256SUMS.txt
+          {
+            echo "Source commit: $GITHUB_SHA"
+            echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo 'Package: com.gathin.tvhome; English; six-app G-GUARD dock.'
+            echo 'Built for an explicit-launch test. No TV connection or Home takeover is performed.'
+            echo 'Signed with a runner-generated debug key as configured by the project.'
+            echo 'Signing keys may differ between runs; a later build may not update an earlier installation.'
+          } > BUILD-INFO.txt
+          {
+            echo '### G-GUARD R4G APK'
+            echo
+            echo "Source commit: \`$GITHUB_SHA\`"
+            echo
+            echo 'Download the gguard-r4g-apk artifact below and extract it.'
+            echo 'SHA-256 of the APK inside the artifact (not the download ZIP):'
+            echo
+            echo '```text'
+            cat SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload APK and checksum
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gguard-r4g-apk
+          path: artifact/
+          if-no-files-found: error
+          retention-days: 30
