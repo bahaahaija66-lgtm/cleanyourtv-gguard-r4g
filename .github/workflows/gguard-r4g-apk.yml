@@ -72,13 +72,16 @@ jobs:
           test "$(stat -c %s "$apk")" -lt 589824
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose "$apk"
           python3 - <<'PYAPK'
-          import os, subprocess
+          import os, re, subprocess
           aapt = os.path.join(os.environ['ANDROID_HOME'], 'build-tools/34.0.0/aapt')
           apk = 'launcher/app/build/outputs/apk/release/app-release.apk'
           badging = subprocess.check_output([aapt, 'dump', 'badging', apk], text=True)
           assert "package: name='com.gathin.tvhome.cinema' " in badging
+          assert set(re.findall(r"uses-permission: name='([^']+)'", badging)) == {
+              'android.permission.ACCESS_NETWORK_STATE', 'android.permission.INTERNET'}
           assert "launchable-activity: name='com.gathin.tvhome.CinemaActivity'" in badging
           manifest = subprocess.check_output([aapt, 'dump', 'xmltree', apk, 'AndroidManifest.xml'], text=True)
+          assert re.search(r"usesCleartextTraffic.*0x0", manifest)
           for forbidden in ('android.intent.category.HOME', 'android.intent.action.BOOT_COMPLETED',
                             'android.permission.WRITE_SECURE_SETTINGS', 'E: provider ',
                             'E: service ', 'E: receiver ', 'E: activity-alias ', 'sharedUserId'):
@@ -86,15 +89,17 @@ jobs:
           print('Compiled APK: independent cinema identity, explicit activity, no Home interception or providers.')
           PYAPK
           mkdir -p artifact
-          cp "$apk" artifact/CleanYourTV-GGUARD-R4G-cinema-release.apk
+          cp "$apk" artifact/CleanYourTV-GGUARD-R4G-cinema-TMDB-release.apk
           cd artifact
-          sha256sum CleanYourTV-GGUARD-R4G-cinema-release.apk > SHA256SUMS.txt
+          sha256sum CleanYourTV-GGUARD-R4G-cinema-TMDB-release.apk > SHA256SUMS.txt
           echo "sha256=$(cut -d ' ' -f1 SHA256SUMS.txt)" >> "$GITHUB_OUTPUT"
           {
             echo "Source commit: $GITHUB_SHA"
             echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo 'Package: com.gathin.tvhome.cinema; 3.2.1-cinema; explicit-launch English six-app dock.'
+            echo 'Package: com.gathin.tvhome.cinema; 3.3-cinema; explicit-launch English six-app dock.'
             echo 'Built for an explicit-launch test. No TV connection or Home takeover is performed.'
+            echo 'TMDB artwork requires a user-supplied API Read Access Token entered in Artwork & TMDB on the TV.'
+            echo 'No token or studio artwork is bundled. Live TMDB authorization, artwork rendering and current branding/terms remain unverified.'
             echo 'Signed with a runner-generated debug key as configured by the project.'
             echo 'Signing keys may differ between runs; a later build may not update an earlier installation.'
           } > BUILD-INFO.txt
@@ -103,7 +108,7 @@ jobs:
             echo
             echo "Source commit: \`$GITHUB_SHA\`"
             echo
-            echo 'Download the gguard-r4g-cinema-apk-<APK-SHA256> artifact below and extract it.'
+            echo 'Download the gguard-r4g-cinema-tmdb-apk-<APK-SHA256> artifact below and extract it.'
             echo 'SHA-256 of the APK inside the artifact (not the download ZIP):'
             echo
             echo '```text'
@@ -114,7 +119,7 @@ jobs:
       - name: Upload APK and checksum
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: gguard-r4g-cinema-apk-${{ steps.package.outputs.sha256 }}
+          name: gguard-r4g-cinema-tmdb-apk-${{ steps.package.outputs.sha256 }}
           path: artifact/
           if-no-files-found: error
           retention-days: 30

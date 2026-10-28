@@ -13,8 +13,9 @@ class CinemaSafetyTest(unittest.TestCase):
 
     def test_no_system_mutation_permissions_or_background_components(self):
         self.assertEqual([v.get(A + 'name') for v in self.root.findall('uses-permission')],
-                         ['android.permission.ACCESS_NETWORK_STATE'])
+                         ['android.permission.ACCESS_NETWORK_STATE', 'android.permission.INTERNET'])
         app = self.root.find('application')
+        self.assertEqual(app.get(A + 'usesCleartextTraffic'), 'false')
         for kind in ('service', 'receiver', 'provider', 'activity-alias'):
             self.assertEqual(app.findall(kind), [], kind)
         activities = app.findall('activity')
