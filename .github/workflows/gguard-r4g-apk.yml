@@ -62,6 +62,7 @@ jobs:
         run: sh ./gradlew --no-daemon --max-workers=2 testReleaseUnitTest lintRelease assembleRelease
 
       - name: Verify and package this run's APK
+        id: package
         run: |
           set -euo pipefail
           apk=launcher/app/build/outputs/apk/release/app-release.apk
@@ -71,6 +72,7 @@ jobs:
           cp "$apk" artifact/CleanYourTV-GGUARD-R4G-6app-release.apk
           cd artifact
           sha256sum CleanYourTV-GGUARD-R4G-6app-release.apk > SHA256SUMS.txt
+          echo "sha256=$(cut -d ' ' -f1 SHA256SUMS.txt)" >> "$GITHUB_OUTPUT"
           {
             echo "Source commit: $GITHUB_SHA"
             echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
@@ -84,7 +86,7 @@ jobs:
             echo
             echo "Source commit: \`$GITHUB_SHA\`"
             echo
-            echo 'Download the gguard-r4g-apk artifact below and extract it.'
+            echo 'Download the gguard-r4g-apk-<APK-SHA256> artifact below and extract it.'
             echo 'SHA-256 of the APK inside the artifact (not the download ZIP):'
             echo
             echo '```text'
@@ -95,7 +97,7 @@ jobs:
       - name: Upload APK and checksum
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: gguard-r4g-apk
+          name: gguard-r4g-apk-${{ steps.package.outputs.sha256 }}
           path: artifact/
           if-no-files-found: error
           retention-days: 30
