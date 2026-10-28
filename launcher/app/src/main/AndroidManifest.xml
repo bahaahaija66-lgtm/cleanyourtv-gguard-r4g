@@ -9,7 +9,7 @@
     </queries>
     <application android:label="@string/cinema_app_name" android:icon="@mipmap/ic_launcher" android:banner="@drawable/banner" android:theme="@style/Theme.TvHome" android:allowBackup="false">
         <!-- Explicit launch only. No HOME filter, receivers, key services or privileged permissions. -->
-        <activity android:name=".CinemaActivity" android:exported="true" android:screenOrientation="landscape">
+        <activity android:name="com.gathin.tvhome.CinemaActivity" android:exported="true" android:screenOrientation="landscape">
             <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LEANBACK_LAUNCHER" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
         </activity>
     </application>

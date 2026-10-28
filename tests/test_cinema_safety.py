@@ -18,7 +18,14 @@ class CinemaSafetyTest(unittest.TestCase):
         for kind in ('service', 'receiver', 'provider', 'activity-alias'):
             self.assertEqual(app.findall(kind), [], kind)
         activities = app.findall('activity')
-        self.assertEqual([v.get(A + 'name') for v in activities], ['.CinemaActivity'])
+        self.assertEqual([v.get(A + 'name') for v in activities], ['com.gathin.tvhome.CinemaActivity'])
+
+    def test_independent_application_identity(self):
+        gradle = (ROOT / 'launcher/app/build.gradle').read_text()
+        self.assertIn("applicationId 'com.gathin.tvhome.cinema'", gradle)
+        self.assertNotIn("getOrElse('com.gathin.tvhome')", gradle)
+        # The Java namespace is intentionally distinct from the install identity.
+        self.assertIn("namespace 'com.gathin.tvhome'", gradle)
 
     def test_explicit_launch_only(self):
         categories = {v.get(A + 'name') for v in self.root.iter('category')}

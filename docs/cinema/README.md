@@ -1,5 +1,12 @@
 # G-GUARD cinematic edition
 
+This edition installs as **`com.gathin.tvhome.cinema`**, alongside the original
+`com.gathin.tvhome`. It does not update, uninstall, or share application data with
+the original. Its Java/resource namespace remains `com.gathin.tvhome`; the manifest
+uses the fully qualified activity class so it resolves independently of the install
+identity. No providers or custom permissions are registered, so no authorities
+collide with the original app. The application ID is fixed, not a build override.
+
 This fork opens `CinemaActivity` as an ordinary TV app. It has no HOME category,
 accessibility/notification services, boot receiver, exported provider, or privileged permissions. Its sole permission
 is read-only network state, retained for legacy source lint compatibility.
@@ -46,7 +53,8 @@ The existing **G-GUARD R4G launcher APK** GitHub Actions workflow runs the Andro
 checks, verifies the APK signature and size gate, and uploads the APK plus
 `SHA256SUMS.txt` and `BUILD-INFO.txt`. Check its source SHA before downloading.
 The APK uses a debug signing key; runner-generated keys may differ between runs,
-so compatibility with an existing installation is not guaranteed. Do not remove
+so future updates to the cinema edition require a matching signing key.
+This does not prevent side-by-side installation with the original launcher. Do not remove
 an existing installation or change default Home to work around a signature mismatch.
 
 Hardware validation still requires a real TV: all D-pad edges, missing/installed
